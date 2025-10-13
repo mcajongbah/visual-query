@@ -10,16 +10,19 @@
     "start": "bun run dist/index.js"
   },
   "dependencies": {
-    "hono": "^4.8.2",
+    "@node-sql/auth": "workspace:*",
+    "@node-sql/db": "workspace:*",
+    "@types/pg": "^8.15.5",
     "better-auth": "catalog:",
     "dotenv": "catalog:",
-    "zod": "catalog:",
-    "@node-sql/auth": "workspace:*",
-    "@node-sql/db": "workspace:*"
+    "hono": "^4.8.2",
+    "mysql2": "^3.15.2",
+    "pg": "^8.16.3",
+    "zod": "catalog:"
   },
   "devDependencies": {
-    "typescript": "catalog:",
     "@types/bun": "^1.2.6",
-    "tsdown": "catalog:"
+    "tsdown": "catalog:",
+    "typescript": "catalog:"
   }
 }

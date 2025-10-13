@@ -7,7 +7,6 @@
     "packages/*"
   ],
   "scripts": {
-    "check": "biome check --write .",
     "prepare": "husky",
     "dev": "turbo dev",
     "build": "turbo build",
@@ -22,20 +21,15 @@
   },
   "dependencies": {
     "dotenv": "^17.2.2",
+    "server": "^1.0.42",
     "zod": "^4.1.11"
   },
   "devDependencies": {
-    "turbo": "^2.5.4",
-    "@biomejs/biome": "^2.2.0",
+    "@types/bun": "^1.2.6",
     "husky": "^9.1.7",
     "lint-staged": "^16.1.2",
     "tsdown": "^0.15.5",
-    "@types/bun": "^1.2.6"
-  },
-  "lint-staged": {
-    "*.{js,ts,cjs,mjs,d.cts,d.mts,jsx,tsx,json,jsonc}": [
-      "biome check --write ."
-    ]
+    "turbo": "^2.5.4"
   },
   "packageManager": "pnpm@10.15.0"
 }

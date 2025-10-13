@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth-client";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 
-export const Route = createFileRoute("/dashboard")({
+export const Route = createFileRoute("/(dashboard)/dashboard")({
 	component: RouteComponent,
 	beforeLoad: async () => {
 		const session = await authClient.getSession();
@@ -10,7 +10,7 @@ export const Route = createFileRoute("/dashboard")({
 			redirect({
 				to: "/login",
 				throw: true,
-			});
+			})
 		}
 		return { session };
 	},
@@ -24,5 +24,5 @@ function RouteComponent() {
 			<h1>Dashboard</h1>
 			<p>Welcome {session.data?.user.name}</p>
 		</div>
-	);
+	)
 }
