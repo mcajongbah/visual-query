@@ -30,6 +30,10 @@
   background: #555;
 }
 
+button {
+  cursor: pointer;
+}
+
 body {
   scrollbar-color: oklch(0.6678 0.2231 36.61);
   scrollbar-width: thin;

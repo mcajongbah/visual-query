@@ -8,7 +8,8 @@ type QueryResults = {
 };
 
 export async function executeQuery(
-  sql: string
+  sql: string,
+  sessionId: string
 ): Promise<QueryResults> {
-  return executeQueryAPI({ sql });
+  return executeQueryAPI({ sql, sessionId });
 }

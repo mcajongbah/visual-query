@@ -107,7 +107,7 @@ function QueryCanvasInner() {
         if (sql && connectionInfo?.sessionId) {
           setIsExecuting(true);
           setQueryError(null);
-          const results = await executeQuery(sql);
+          const results = await executeQuery(sql, connectionInfo.sessionId);
           setQueryResults(results);
         }
       } catch (error) {

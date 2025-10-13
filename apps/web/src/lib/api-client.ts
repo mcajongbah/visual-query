@@ -22,6 +22,7 @@ export type ConnectToDatabaseParams = {
 
 export type ExecuteQueryParams = {
   sql: string;
+  sessionId: string;
 };
 
 export type DisconnectParams = {
@@ -60,7 +61,7 @@ export class SchemaFetchError extends ApiError {
   }
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
 const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
@@ -140,7 +141,7 @@ export async function connectToDatabase(
   try {
     // Test connection
     const { data: connectionData } = await apiClient.post<ConnectionResponse>(
-      "/api/connect",
+      "/api/db/connect",
       {
         dialect: params.dialect,
         connectionString: params.connectionString,
@@ -152,7 +153,7 @@ export async function connectToDatabase(
     // Get schema
     try {
       const { data: schema } = await apiClient.post<DatabaseSchema>(
-        "/api/schema",
+        "/api/db/schema",
         { sessionId }
       );
 
@@ -190,8 +191,9 @@ export async function executeQuery(
   params: ExecuteQueryParams
 ): Promise<QueryResults> {
   try {
-    const { data } = await apiClient.post<QueryResults>("/api/query", {
+    const { data } = await apiClient.post<QueryResults>("/api/db/query", {
       sql: params.sql,
+      sessionId: params.sessionId,
     });
 
     return data;
@@ -209,7 +211,7 @@ export async function executeQuery(
 
 export async function disconnect(params: DisconnectParams): Promise<void> {
   try {
-    await apiClient.post("/api/disconnect", {
+    await apiClient.post("/api/db/disconnect", {
       sessionId: params.sessionId,
     });
   } catch (error) {
