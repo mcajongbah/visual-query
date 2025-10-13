@@ -184,6 +184,10 @@ export const useQueryStore = create<QueryStore>((set) => ({
         nodeType = "orderby" as SqlKeywordMeta["kind"];
       else if (keyword.value.includes("JOIN")) nodeType = "join";
 
+      // Initialize config based on node type
+      // Start with empty config - nodes will show "*" or appropriate defaults
+      let initialConfig: SqlNodeData["config"] = {};
+
       const newNode: Node<SqlNodeData> = {
         id: `node-${++nodeIdCounter}`,
         type: nodeType,
@@ -192,7 +196,7 @@ export const useQueryStore = create<QueryStore>((set) => ({
           label: keyword.value,
           kind: keyword.kind,
           meta: keyword,
-          config: {},
+          config: initialConfig,
         },
       };
       return { nodes: [...state.nodes, newNode] };

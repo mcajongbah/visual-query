@@ -1,24 +1,19 @@
+import { exportToCSV } from "@/lib/export-csv";
 import {
   createColumnHelper,
   flexRender,
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { CopyIcon, DownloadIcon, Loader2Icon } from "lucide-react";
+import { DownloadIcon, Loader2Icon } from "lucide-react";
 import { useMemo } from "react";
 import { useQueryStore } from "store/query-store";
 import { Button } from "./ui/button";
-import { exportToCSV } from "@/lib/export-csv";
+import { CopyButton } from "./ui/copy-button";
 
 const QueryResults = () => {
   const { generatedSQL, queryResults, queryError, isExecuting } =
     useQueryStore();
-
-  const handleCopySQL = () => {
-    if (generatedSQL) {
-      navigator.clipboard.writeText(generatedSQL);
-    }
-  };
 
   const handleExportCSV = () => {
     if (queryResults && queryResults.rows.length > 0) {
@@ -68,15 +63,12 @@ const QueryResults = () => {
       <div className="border rounded-md">
         <div className="px-3 py-2 border-b flex justify-between items-center">
           <h5 className="font-medium text-sm">Generated SQL</h5>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleCopySQL}
+          <CopyButton
+            content={generatedSQL}
             disabled={!generatedSQL}
-          >
-            <CopyIcon className="size-3 mr-1" />
-            Copy
-          </Button>
+            variant="outline"
+            size="icon-sm"
+          />
         </div>
 
         <div className="p-3 bg-muted">
@@ -146,7 +138,7 @@ const QueryResults = () => {
                     className="border-b hover:bg-muted/50 transition-colors"
                   >
                     {row.getVisibleCells().map((cell) => (
-                      <td key={cell.id} className="px-3 py-2">
+                      <td key={cell.id} className="px-3 py-2 truncate">
                         {flexRender(
                           cell.column.columnDef.cell,
                           cell.getContext()

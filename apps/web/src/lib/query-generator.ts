@@ -1,4 +1,4 @@
-  import type { Edge, Node } from "@xyflow/react";
+import type { Edge, Node } from "@xyflow/react";
 import type { SqlNodeData } from "store/query-store";
 
 type DatabaseSchema = {
@@ -14,7 +14,7 @@ type DatabaseSchema = {
 export function generateSQL(
   nodes: Node<SqlNodeData>[],
   edges: Edge[],
-  _schema: DatabaseSchema | null // eslint-disable-line @typescript-eslint/no-unused-vars
+  schema: DatabaseSchema | null
 ): string {
   if (nodes.length === 0) return "";
 
@@ -63,14 +63,40 @@ export function generateSQL(
   // Build SQL parts
   const sqlParts: Record<string, string> = {};
 
+  // Get all available columns from schema for comparison
+  const allAvailableColumns =
+    schema?.tables.flatMap((table) =>
+      table.columns.map((col) => `${table.schema}.${table.name}.${col.name}`)
+    ) || [];
+
   for (const node of orderedNodes) {
     const { label, config } = node.data;
 
     switch (label) {
       case "SELECT": {
         const cols = config?.selectedColumns;
-        if (!cols || cols.length === 0) {
+        // Use * if no columns selected OR if all available columns are selected
+        if (
+          !cols ||
+          cols.length === 0 ||
+          (allAvailableColumns.length > 0 &&
+            cols.length === allAvailableColumns.length)
+        ) {
           sqlParts.SELECT = "SELECT *";
+          // Auto-detect FROM table from selected columns even when using *
+          if (cols && cols.length > 0) {
+            const firstCol = cols[0];
+            const parts = firstCol.split(".");
+            if (parts.length >= 3) {
+              // Format: schema.table.column - use quoted table name
+              const tableName = parts[1];
+              sqlParts.FROM = `FROM "${tableName}"`;
+            } else if (parts.length === 2) {
+              // Format: table.column
+              const tableName = parts[0];
+              sqlParts.FROM = `FROM "${tableName}"`;
+            }
+          }
         } else {
           // Extract just column names (simplified, no table prefix)
           const colNames = cols.map((c) => {

@@ -48,7 +48,7 @@ function HomeComponent() {
         <div className="flex flex-col flex-1 overflow-hidden">
           <QueryCanvas />
         </div>
-        <div className="w-[480px] min-h-full overflow-auto border-l px-4 py-10">
+        <div className="w-[420px] min-h-full overflow-auto border-l px-4 py-10">
           <QueryResults />
         </div>
       </div>

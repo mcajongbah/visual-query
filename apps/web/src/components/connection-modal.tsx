@@ -161,11 +161,6 @@ export default function ConnectionModal() {
       if (selectKeyword && fromKeyword && result.schema.tables.length > 0) {
         const firstTable = result.schema.tables[0];
 
-        // Get all columns from first table
-        const allColumns = firstTable.columns.map(
-          (col) => `${firstTable.schema}.${firstTable.name}.${col.name}`
-        );
-
         // Add SELECT node at position (100, 100)
         addNode(selectKeyword, { x: 100, y: 100 });
 
@@ -181,11 +176,6 @@ export default function ConnectionModal() {
           if (nodes.length >= 2) {
             const selectNode = nodes[0];
             const fromNode = nodes[1];
-
-            // Configure SELECT node with all columns
-            state.updateNodeData(selectNode.id, {
-              selectedColumns: allColumns,
-            });
 
             // Configure FROM node with first table
             state.updateNodeData(fromNode.id, {
