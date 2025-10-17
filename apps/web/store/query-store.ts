@@ -1,6 +1,8 @@
 import type { Edge, Node } from "@xyflow/react";
 import { create } from "zustand";
-import type { SqlKeywordMeta } from "../constants/keywords";
+import type { SqlKeywordMeta } from "../src/constants/keywords";
+import { getNodeConfig } from "../src/lib/node-configs";
+import { executeNodeEffects } from "../src/lib/node-effects";
 
 type Dialect = "postgres" | "mysql";
 
@@ -172,21 +174,44 @@ export const useQueryStore = create<QueryStore>((set) => ({
 
   addNode: (keyword, position) =>
     set((state) => {
-      // Map keyword value to node type for custom components
-      let nodeType = keyword.kind;
-      if (keyword.value === "SELECT")
-        nodeType = "select" as SqlKeywordMeta["kind"];
-      else if (keyword.value === "FROM")
-        nodeType = "from" as SqlKeywordMeta["kind"];
-      else if (keyword.value === "WHERE")
-        nodeType = "where" as SqlKeywordMeta["kind"];
-      else if (keyword.value === "ORDER BY")
-        nodeType = "orderby" as SqlKeywordMeta["kind"];
-      else if (keyword.value.includes("JOIN")) nodeType = "join";
+      // Get node config to determine archetype
+      const config = getNodeConfig(keyword.value);
 
-      // Initialize config based on node type
-      // Start with empty config - nodes will show "*" or appropriate defaults
+      // Map to archetype-based node type
+      let nodeType = keyword.kind;
+      if (config?.archetype === "predicate") {
+        nodeType = "predicate" as SqlKeywordMeta["kind"];
+      } else if (config?.archetype === "relation") {
+        nodeType = "relation" as SqlKeywordMeta["kind"];
+      } else if (config?.archetype === "clause") {
+        nodeType = "configurable-clause" as SqlKeywordMeta["kind"];
+      } else if (config?.archetype === "simple") {
+        nodeType = "configurable-clause" as SqlKeywordMeta["kind"];
+      } else {
+        // Fallback to old mapping for keywords without config
+        if (keyword.value === "SELECT")
+          nodeType = "configurable-clause" as SqlKeywordMeta["kind"];
+        else if (keyword.value === "FROM")
+          nodeType = "configurable-clause" as SqlKeywordMeta["kind"];
+        else if (keyword.value === "WHERE")
+          nodeType = "predicate" as SqlKeywordMeta["kind"];
+        else if (keyword.value === "HAVING")
+          nodeType = "predicate" as SqlKeywordMeta["kind"];
+        else if (keyword.value === "ORDER BY")
+          nodeType = "configurable-clause" as SqlKeywordMeta["kind"];
+        else if (keyword.value.includes("JOIN"))
+          nodeType = "relation" as SqlKeywordMeta["kind"];
+      }
+
+      // Initialize config with default values from field configs
       let initialConfig: SqlNodeData["config"] = {};
+      if (config?.fields) {
+        for (const field of config.fields) {
+          if (field.defaultValue !== undefined) {
+            initialConfig[field.key] = field.defaultValue;
+          }
+        }
+      }
 
       const newNode: Node<SqlNodeData> = {
         id: `node-${++nodeIdCounter}`,
@@ -203,8 +228,9 @@ export const useQueryStore = create<QueryStore>((set) => ({
     }),
 
   updateNodeData: (nodeId, config) =>
-    set((state) => ({
-      nodes: state.nodes.map((node) =>
+    set((state) => {
+      // Update the target node
+      let updatedNodes = state.nodes.map((node) =>
         node.id === nodeId
           ? {
               ...node,
@@ -214,8 +240,28 @@ export const useQueryStore = create<QueryStore>((set) => ({
               },
             }
           : node
-      ),
-    })),
+      );
+
+      // Execute cascading effects for each changed config key
+      const triggerNode = updatedNodes.find((n) => n.id === nodeId);
+      if (triggerNode) {
+        for (const changedKey of Object.keys(config)) {
+          const result = executeNodeEffects(triggerNode, changedKey, {
+            nodes: updatedNodes,
+            edges: state.edges,
+            schema: state.schema,
+            triggerNodeId: nodeId,
+            changedConfig: config,
+          });
+
+          if (result.shouldRegenerate) {
+            updatedNodes = result.updatedNodes;
+          }
+        }
+      }
+
+      return { nodes: updatedNodes };
+    }),
 
   removeNode: (nodeId) =>
     set((state) => ({

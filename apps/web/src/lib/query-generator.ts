@@ -1,5 +1,9 @@
 import type { Edge, Node } from "@xyflow/react";
 import type { SqlNodeData } from "store/query-store";
+import type {
+  PredicateCondition,
+  PredicateGroup,
+} from "../components/config-fields/predicate-builder-field";
 
 type DatabaseSchema = {
   dialect: string;
@@ -10,6 +14,58 @@ type DatabaseSchema = {
     columns: Array<{ name: string }>;
   }>;
 };
+
+/**
+ * Build SQL for predicate conditions (WHERE/HAVING)
+ */
+function buildPredicateSQL(
+  conditions: Array<PredicateCondition | PredicateGroup>
+): string {
+  if (conditions.length === 0) return "";
+
+  const parts: string[] = [];
+
+  for (const item of conditions) {
+    if ("type" in item && item.type === "group") {
+      // Handle group
+      const groupSQL = buildPredicateSQL(item.conditions);
+      if (groupSQL) {
+        const prefix = item.parentLogicalOp
+          ? `${item.parentLogicalOp} `
+          : "";
+        parts.push(`${prefix}(${groupSQL})`);
+      }
+    } else {
+      // Handle condition
+      const condition = item as PredicateCondition;
+      if (!condition.column || !condition.operator) continue;
+
+      const colName = `"${condition.column.split(".").pop() || condition.column}"`;
+      let conditionSQL = "";
+
+      if (
+        condition.operator === "IS NULL" ||
+        condition.operator === "IS NOT NULL"
+      ) {
+        conditionSQL = `${colName} ${condition.operator}`;
+      } else if (condition.operator === "LIKE") {
+        conditionSQL = `${colName} LIKE '${condition.value || ""}'`;
+      } else if (condition.operator === "IN") {
+        conditionSQL = `${colName} IN (${condition.value || ""})`;
+      } else if (condition.operator === "BETWEEN") {
+        const values = (condition.value || "").split(",");
+        conditionSQL = `${colName} BETWEEN '${values[0] || ""}' AND '${values[1] || ""}'`;
+      } else {
+        conditionSQL = `${colName} ${condition.operator} '${condition.value || ""}'`;
+      }
+
+      const prefix = condition.logicalOp ? `${condition.logicalOp} ` : "";
+      parts.push(`${prefix}${conditionSQL}`);
+    }
+  }
+
+  return parts.join(" ");
+}
 
 export function generateSQL(
   nodes: Node<SqlNodeData>[],
@@ -151,23 +207,12 @@ export function generateSQL(
       }
 
       case "WHERE": {
-        const { column, operator, value } = config || {};
-        if (column && operator) {
-          // Use just the column name (last part) with quotes
-          const colName = `"${column.split(".").pop() || column}"`;
-          let condition = "";
-          if (operator === "IS NULL" || operator === "IS NOT NULL") {
-            condition = `${colName} ${operator}`;
-          } else if (operator === "LIKE") {
-            condition = `${colName} LIKE '${value || ""}'`;
-          } else if (operator === "IN") {
-            condition = `${colName} IN (${value || ""})`;
-          } else {
-            condition = `${colName} ${operator} '${value || ""}'`;
+        const conditions = config?.conditions || [];
+        if (conditions.length > 0) {
+          const whereClause = buildPredicateSQL(conditions);
+          if (whereClause) {
+            sqlParts.WHERE = `WHERE ${whereClause}`;
           }
-          sqlParts.WHERE = sqlParts.WHERE
-            ? `${sqlParts.WHERE} AND ${condition}`
-            : `WHERE ${condition}`;
         }
         break;
       }
@@ -210,11 +255,12 @@ export function generateSQL(
       }
 
       case "HAVING": {
-        const { column, operator, value } = config || {};
-        if (column && operator) {
-          const colName = `"${column.split(".").pop() || column}"`;
-          const condition = `${colName} ${operator} ${value || "?"}`;
-          sqlParts.HAVING = `HAVING ${condition}`;
+        const conditions = config?.conditions || [];
+        if (conditions.length > 0) {
+          const havingClause = buildPredicateSQL(conditions);
+          if (havingClause) {
+            sqlParts.HAVING = `HAVING ${havingClause}`;
+          }
         }
         break;
       }
